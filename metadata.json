@@ -1,0 +1,6 @@
+{
+  "name": "NetSage AI",
+  "description": "AI-Powered Network Troubleshooting, Topology Modeling, and Rule Checking Platform",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
