@@ -29,6 +29,22 @@ export const LogsDrawer: React.FC<LogsDrawerProps> = ({
       l.level.toLowerCase().includes(filter.toLowerCase())
   );
 
+  const handleDownloadLogs = () => {
+    const fileName = `${(selectedNode?.name || 'node').replace(/\s+/g, '_')}-syslog-${new Date().toISOString().replace(/[:.]/g, '-')}.log`;
+    const lines = filteredLogs.length
+      ? filteredLogs.map((log) => `[${log.time}] ${log.level} ${log.msg}`)
+      : ['No log entries available for this node.'];
+    const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = fileName;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center p-4 backdrop-blur-xs select-none">
       <div className="bg-white border border-[#c4c6cd] shadow-2xl rounded max-w-2xl w-full flex flex-col overflow-hidden animate-in zoom-in-95 duration-150">
@@ -94,16 +110,24 @@ export const LogsDrawer: React.FC<LogsDrawerProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-3 border-t border-[#c4c6cd] bg-[#f8f9fa] flex justify-between items-center text-xs">
+        <div className="p-3 border-t border-[#c4c6cd] bg-[#f8f9fa] flex justify-between items-center text-xs gap-2">
           <span className="font-mono text-[11px] text-[#44474c]">
             Buffer: {filteredLogs.length} lines | Level: Debugging
           </span>
-          <button
-            onClick={onClose}
-            className="px-4 py-1.5 bg-[#041627] text-white text-xs font-semibold rounded hover:bg-[#1a2b3c]"
-          >
-            Close Syslog
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleDownloadLogs}
+              className="px-3 py-1.5 bg-[#0058be] text-white text-xs font-semibold rounded hover:bg-[#004bb0]"
+            >
+              Download Logs
+            </button>
+            <button
+              onClick={onClose}
+              className="px-4 py-1.5 bg-[#041627] text-white text-xs font-semibold rounded hover:bg-[#1a2b3c]"
+            >
+              Close Syslog
+            </button>
+          </div>
         </div>
       </div>
     </div>
