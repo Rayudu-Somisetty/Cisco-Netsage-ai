@@ -6,6 +6,34 @@ interface LogsDrawerProps {
   onClose: () => void;
   selectedNode: NetworkNode | null;
   nodes: NetworkNode[];
+  problemDescription?: string;
+  commandType?: string;
+  commandOutput?: string;
+  aiInsight?: {
+    rootCause: string;
+    confidence: number;
+    confidenceLevel: 'HIGH' | 'MEDIUM' | 'LOW';
+    osiLayer: string;
+    evidence: string[];
+    nextCommand: string;
+    suggestedFix: string;
+    explanation?: string;
+    ruleChecks?: Array<{
+      id: string;
+      label: string;
+      status: 'pass' | 'fail' | 'warning';
+      detail: string;
+    }>;
+  } | null;
+  humanReview?: {
+    decision: 'Accept' | 'Edit' | 'Reject' | null;
+    comments: string;
+    reviewer: string;
+    verificationTest: string;
+    verificationOutput: string | null;
+    isTesting: boolean;
+    submitted: boolean;
+  };
 }
 
 export const LogsDrawer: React.FC<LogsDrawerProps> = ({
@@ -13,6 +41,19 @@ export const LogsDrawer: React.FC<LogsDrawerProps> = ({
   onClose,
   selectedNode,
   nodes,
+  problemDescription = '',
+  commandType = '',
+  commandOutput = '',
+  aiInsight = null,
+  humanReview = {
+    decision: null,
+    comments: '',
+    reviewer: '',
+    verificationTest: '',
+    verificationOutput: null,
+    isTesting: false,
+    submitted: false,
+  },
 }) => {
   const [filter, setFilter] = useState('');
 
@@ -35,6 +76,31 @@ export const LogsDrawer: React.FC<LogsDrawerProps> = ({
       ? filteredLogs.map((log) => `[${log.time}] ${log.level} ${log.msg}`)
       : ['No log entries available for this node.'];
     const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = fileName;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleDownloadPromptLog = () => {
+    const exportData = {
+      exportedAt: new Date().toISOString(),
+      selectedNode: selectedNode ? { ...selectedNode } : null,
+      topology: nodes.map((node) => ({ ...node })),
+      problemDescription,
+      commandType,
+      commandOutput,
+      aiInsight,
+      humanReview,
+      syslog: filteredLogs,
+    };
+
+    const fileName = `${(selectedNode?.name || 'session').replace(/\s+/g, '_')}-prompt-log-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = url;
@@ -117,9 +183,15 @@ export const LogsDrawer: React.FC<LogsDrawerProps> = ({
           <div className="flex items-center gap-2">
             <button
               onClick={handleDownloadLogs}
+              className="px-3 py-1.5 bg-[#1a2b3c] text-white text-xs font-semibold rounded hover:bg-[#142232]"
+            >
+              Download Syslog
+            </button>
+            <button
+              onClick={handleDownloadPromptLog}
               className="px-3 py-1.5 bg-[#0058be] text-white text-xs font-semibold rounded hover:bg-[#004bb0]"
             >
-              Download Logs
+              Download Prompt Log
             </button>
             <button
               onClick={onClose}

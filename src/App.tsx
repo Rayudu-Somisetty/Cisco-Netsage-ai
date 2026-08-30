@@ -600,6 +600,11 @@ export default function App() {
         onClose={() => setIsLogsOpen(false)}
         selectedNode={selectedNode}
         nodes={nodes}
+        problemDescription={problemDescription}
+        commandType={commandType}
+        commandOutput={commandOutput}
+        aiInsight={aiInsight}
+        humanReview={humanReview}
       />
 
       <NotificationModal
