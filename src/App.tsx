@@ -21,6 +21,15 @@ import {
   TroubleshootingCase,
 } from './types/network';
 
+// When the UI is opened through Vite preview or another local static server,
+// use the combined Express API server instead of requesting missing local routes.
+const localApiBaseUrl = typeof window !== 'undefined'
+  && ['localhost', '127.0.0.1'].includes(window.location.hostname)
+  && window.location.port !== '3000'
+  ? 'http://localhost:3000'
+  : '';
+const apiUrl = (path: string) => `${localApiBaseUrl}${path}`;
+
 export default function App() {
   // Navigation & Case State
   const [currentTab, setCurrentTab] = useState<'Dashboard' | 'Topology' | 'Sessions'>('Topology');
@@ -69,7 +78,7 @@ export default function App() {
   const [reviewStats, setReviewStats] = useState({ totalCases: 0, issueTypes: {}, severity: {}, decisions: { Accepted: 0, Edited: 0, Rejected: 0 }, aiAgreementRate: 0 });
 
   useEffect(() => {
-    fetch('/api/state').then((response) => response.json()).then((state) => {
+    fetch(apiUrl('/api/state')).then((response) => response.json()).then((state) => {
       const nextTopology = state.topology || [];
       setNodes(nextTopology);
       setCasesHistory(state.history || []);
@@ -77,8 +86,8 @@ export default function App() {
       setLastPersistedTopology(JSON.stringify(nextTopology));
       setIsHydrated(true);
     }).catch(() => undefined);
-    fetch('/api/review/stats').then((response) => response.json()).then(setReviewStats).catch(() => undefined);
-    fetch('/api/health').then((response) => response.json()).then((health) => {
+    fetch(apiUrl('/api/review/stats')).then((response) => response.json()).then(setReviewStats).catch(() => undefined);
+    fetch(apiUrl('/api/health')).then((response) => response.json()).then((health) => {
       if (!health?.hasGeminiKey) {
         promptForApiKey('No valid Gemini API key is currently configured. Add a key here, or update the embedded fallback key in the server code.');
       }
@@ -90,7 +99,7 @@ export default function App() {
     const nextTopology = JSON.stringify(nodes);
     if (nextTopology === lastPersistedTopology) return;
 
-    fetch('/api/topology', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ topology: nodes }) })
+    fetch(apiUrl('/api/topology'), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ topology: nodes }) })
       .then(() => setLastPersistedTopology(nextTopology))
       .catch(() => undefined);
   }, [nodes, isHydrated, lastPersistedTopology]);
@@ -282,7 +291,7 @@ export default function App() {
   const handleRunAnalysis = async () => {
     setIsAnalyzing(true);
     try {
-      const res = await fetch('/api/diagnose', {
+      const res = await fetch(apiUrl('/api/diagnose'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -330,7 +339,7 @@ export default function App() {
     setHumanReview((prev) => ({ ...prev, isTesting: true }));
 
     try {
-      const res = await fetch('/api/test-connectivity', {
+      const res = await fetch(apiUrl('/api/test-connectivity'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -359,7 +368,7 @@ export default function App() {
   // Submit Final Report to Case History
   const handleSubmitReport = async () => {
     if (!aiInsight || !humanReview.decision) return;
-    const response = await fetch('/api/review/submit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+    const response = await fetch(apiUrl('/api/review/submit'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
       aiDiagnosis: aiInsight, checkerFindings: aiInsight.ruleChecks, humanDecision: humanReview.decision,
       finalDiagnosis: humanReview.decision === 'Edit' ? humanReview.comments : aiInsight.rootCause,
       reasonForChange: humanReview.comments, reviewer: humanReview.reviewer, verificationResult: humanReview.verificationOutput,
@@ -369,7 +378,7 @@ export default function App() {
     if (data.success) {
       setCaseId(data.caseId);
       setCasesHistory(data.history || []);
-      setReviewStats(await (await fetch('/api/review/stats')).json());
+      setReviewStats(await (await fetch(apiUrl('/api/review/stats'))).json());
       setHumanReview((prev) => ({ ...prev, submitted: true }));
     }
   };

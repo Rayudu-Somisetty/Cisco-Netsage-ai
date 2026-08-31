@@ -15,6 +15,17 @@ const dataDir = path.join(process.cwd(), 'data');
 const topologyPath = path.join(dataDir, 'topology.json');
 const reviewPath = path.join(process.cwd(), 'review_log.csv');
 const checkerPath = path.join(process.cwd(), 'checker', 'rule_checker.py');
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,OPTIONS');
+  }
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
+  next();
+});
 app.use(express.json({ limit: '10mb' }));
 
 function readTopology(): any[] {
