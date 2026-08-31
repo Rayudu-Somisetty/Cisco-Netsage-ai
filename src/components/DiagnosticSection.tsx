@@ -190,8 +190,8 @@ export const DiagnosticSection: React.FC<DiagnosticSectionProps> = ({
               ) : aiInsight ? (
                 <div className="bg-white border border-[#74777d]/40 flex-1 overflow-y-auto flex flex-col rounded shadow-2xs">
                   {/* Root Cause Banner */}
-                  <div className="bg-[#041627] px-3 py-2 text-white font-sans font-semibold text-xs shrink-0 rounded-t flex items-center justify-between">
-                    <span className="truncate">{aiInsight.rootCause}</span>
+                  <div className="bg-[#041627] px-3 py-2 text-white font-sans font-semibold text-xs shrink-0 rounded-t flex items-start justify-between gap-2">
+                    <span className="leading-relaxed">{aiInsight.rootCause}</span>
                     <span className="w-2 h-2 rounded-full bg-[#4edea3] shrink-0"></span>
                   </div>
 
@@ -218,6 +218,17 @@ export const DiagnosticSection: React.FC<DiagnosticSectionProps> = ({
                         ))}
                       </ul>
                     </div>
+
+                    {aiInsight.explanation && (
+                      <div>
+                        <span className="font-mono text-[11px] font-semibold text-[#191c1d] opacity-60 block mb-1 tracking-wider">
+                          WHAT THIS MEANS
+                        </span>
+                        <p className="text-[11px] leading-relaxed text-[#191c1d]">
+                          {aiInsight.explanation}
+                        </p>
+                      </div>
+                    )}
 
                     {/* Next Command Suggestion */}
                     <div>
@@ -281,7 +292,7 @@ export const DiagnosticSection: React.FC<DiagnosticSectionProps> = ({
                   <div className="bg-white border border-[#74777d]/40 p-2.5 shrink-0 rounded shadow-2xs">
                     <div className="flex justify-between items-center border-b border-[#c4c6cd]/50 pb-1 mb-1.5">
                       <h4 className="font-sans text-xs font-bold text-[#041627]">
-                        Python Rule Checker
+                        Network Rule Checks
                       </h4>
                       <span className="font-mono text-[10px] text-[#4edea3] bg-[#00311f] px-1.5 rounded">
                         {aiInsight.ruleChecks.length} Rules Evaluated
@@ -320,6 +331,17 @@ export const DiagnosticSection: React.FC<DiagnosticSectionProps> = ({
                         );
                       })}
                     </div>
+
+                    {aiInsight.ruleChecks.some((rule) => rule.status !== 'pass') && (
+                      <div className="mt-2 space-y-1 border-t border-[#c4c6cd]/50 pt-1.5">
+                        {aiInsight.ruleChecks.filter((rule) => rule.status !== 'pass').map((rule) => (
+                          <div key={`${rule.id}-detail`} className="text-[10px] leading-snug text-[#44474c]">
+                            <span className={rule.status === 'fail' ? 'font-bold text-[#ba1a1a]' : 'font-bold text-[#9a6700]'}>{rule.label}: </span>
+                            {rule.detail}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* Human Review */}
