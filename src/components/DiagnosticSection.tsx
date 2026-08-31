@@ -25,19 +25,11 @@ interface DiagnosticSectionProps {
 }
 
 const COMMAND_OPTIONS = [
-  'show ip route',
-  'show vlan brief',
-  'show interfaces trunk',
-  'show interfaces <if> switchport',
-  'show ip interface brief',
-  'show running-config',
-  'show access-lists',
-  'show ip nat translations',
-  'show ip dhcp binding / pool',
-  'show cdp neighbors',
-  'show wlan summary / dot11',
-  'show ip ospf neighbor',
-  'Other / Custom',
+  'show ip route', 'show vlan brief', 'show interfaces trunk',
+  'show interfaces <if> switchport', 'show ip interface brief',
+  'show running-config', 'show access-lists', 'show ip nat translations',
+  'show ip dhcp binding / pool', 'show cdp neighbors',
+  'show wlan summary / dot11', 'show ip ospf neighbor', 'Other / Custom',
 ];
 
 export const DiagnosticSection: React.FC<DiagnosticSectionProps> = ({
@@ -121,11 +113,7 @@ export const DiagnosticSection: React.FC<DiagnosticSectionProps> = ({
                   onChange={(e) => onChangeCommandType(e.target.value)}
                 >
                   <option value="">Select command</option>
-                  {COMMAND_OPTIONS.map((cmd) => (
-                    <option key={cmd} value={cmd}>
-                      {cmd}
-                    </option>
-                  ))}
+                  {COMMAND_OPTIONS.map((cmd) => <option key={cmd} value={cmd}>{cmd}</option>)}
                 </select>
               </div>
 
