@@ -48,11 +48,6 @@ export default function App() {
 
   // AI Insights & Human Review State
   const [aiInsight, setAiInsight] = useState<AIInsightResult | null>(null);
-  const [showApiKeyPrompt, setShowApiKeyPrompt] = useState(false);
-  const [apiKeyInput, setApiKeyInput] = useState(() => {
-    if (typeof window === 'undefined') return '';
-    return localStorage.getItem('netsage-api-key') || '';
-  });
   const [humanReview, setHumanReview] = useState<HumanReviewState>({
     decision: null,
     comments: '',
@@ -62,14 +57,6 @@ export default function App() {
     isTesting: false,
     submitted: false,
   });
-
-  const promptForApiKey = (message = 'Add your Gemini API key below, then run the diagnosis again.') => {
-    setShowApiKeyPrompt(true);
-    setFooterModalInfo({
-      title: 'Gemini API key required',
-      content: message,
-    });
-  };
 
   // Sessions / Case History
   const [casesHistory, setCasesHistory] = useState<TroubleshootingCase[]>([]);
@@ -87,11 +74,6 @@ export default function App() {
       setIsHydrated(true);
     }).catch(() => undefined);
     fetch(apiUrl('/api/review/stats')).then((response) => response.json()).then(setReviewStats).catch(() => undefined);
-    fetch(apiUrl('/api/health')).then((response) => response.json()).then((health) => {
-      if (!health?.hasGeminiKey) {
-        promptForApiKey('No valid Gemini API key is currently configured. Add a key here, or update the embedded fallback key in the server code.');
-      }
-    }).catch(() => undefined);
   }, []);
 
   useEffect(() => {
@@ -301,7 +283,6 @@ export default function App() {
           topology: nodes,
           selectedNode,
           caseId,
-          apiKey: apiKeyInput || undefined,
         }),
       });
 
@@ -311,20 +292,28 @@ export default function App() {
         : null;
 
       if (!data) {
-        throw new Error(`Diagnosis endpoint returned ${res.status} instead of JSON. Start the app with \"npm run dev\" (not Vite preview/static hosting) so the Express API is available.`);
+        throw new Error(`Diagnosis endpoint returned ${res.status} instead of JSON. On Vercel, check Function logs and environment variables.`);
       }
       if (data.success && data.data) {
         setAiInsight(data.data);
-        setShowApiKeyPrompt(false);
+        if (data.caseId) setCaseId(data.caseId);
+        const [stateResult, statsResult] = await Promise.allSettled([
+          fetch(apiUrl('/api/state')).then((response) => response.json()),
+          fetch(apiUrl('/api/review/stats')).then((response) => response.json()),
+        ]);
+        if (stateResult.status === 'fulfilled') setCasesHistory(stateResult.value.history || []);
+        if (statsResult.status === 'fulfilled') setReviewStats(statsResult.value);
       } else {
         setAiInsight(null);
-        promptForApiKey(data.error || 'Add your Gemini API key below, then run the diagnosis again.');
+        showBackendError(data.error || 'The AI diagnosis endpoint returned an error.');
       }
     } catch (err) {
       console.error('Failed to run AI diagnosis:', err);
       setAiInsight(null);
       const message = err instanceof Error ? err.message : 'The AI service could not be reached.';
-      promptForApiKey(message);
+      showBackendError(message);
+    } finally {
+      setIsAnalyzing(false);
     }
   };
 
@@ -372,7 +361,7 @@ export default function App() {
       aiDiagnosis: aiInsight, checkerFindings: aiInsight.ruleChecks, humanDecision: humanReview.decision,
       finalDiagnosis: humanReview.decision === 'Edit' ? humanReview.comments : aiInsight.rootCause,
       reasonForChange: humanReview.comments, reviewer: humanReview.reviewer, verificationResult: humanReview.verificationOutput,
-      targetDevice: selectedNode?.name || '', problemDescription, commandType, commandOutput, verificationTest: humanReview.verificationTest, nodeCount: nodes.length,
+      targetDevice: selectedNode?.name || '', problemDescription, commandType, commandOutput, verificationTest: humanReview.verificationTest, nodeCount: nodes.length, caseId,
     }) });
     const data = await response.json();
     if (data.success) {
@@ -659,59 +648,6 @@ export default function App() {
             >
               Close
             </button>
-          </div>
-        </div>
-      )}
-
-      {showApiKeyPrompt && (
-        <div className="fixed inset-0 bg-black/40 z-[60] flex items-center justify-center p-4 backdrop-blur-xs select-none">
-          <div className="bg-white border border-[#c4c6cd] shadow-2xl rounded max-w-md w-full p-5 space-y-3 animate-in zoom-in-95 duration-150">
-            <div className="flex justify-between items-center border-b border-[#c4c6cd] pb-2">
-              <h3 className="font-bold text-sm text-[#041627]">Gemini API key required</h3>
-              <button
-                onClick={() => setShowApiKeyPrompt(false)}
-                className="text-[#74777d] hover:text-[#041627] text-sm font-bold"
-              >
-                ✕
-              </button>
-            </div>
-            <p className="text-xs text-[#44474c] leading-relaxed">
-              Add your Gemini API key to continue with AI diagnosis. The key is stored locally in this browser session only.
-            </p>
-            <label className="block font-mono text-[10px] font-semibold uppercase text-[#191c1d] opacity-70">
-              Gemini API Key
-            </label>
-            <input
-              type="password"
-              value={apiKeyInput}
-              onChange={(e) => setApiKeyInput(e.target.value)}
-              placeholder="Enter Gemini API key"
-              className="w-full border border-[#74777d]/60 bg-white text-xs p-2 rounded outline-none focus:border-[#0058be]"
-            />
-            <div className="flex gap-2">
-              <button
-                onClick={() => {
-                  if (apiKeyInput.trim()) {
-                    const trimmedKey = apiKeyInput.trim();
-                    localStorage.setItem('netsage-api-key', trimmedKey);
-                    setShowApiKeyPrompt(false);
-                    setFooterModalInfo({
-                      title: 'API key saved',
-                      content: 'Your Gemini key has been saved locally and will be used as a live fallback for future diagnoses.',
-                    });
-                  }
-                }}
-                className="flex-1 py-2 bg-[#0058be] text-white text-xs font-semibold rounded hover:bg-[#004bb0]"
-              >
-                Save Key
-              </button>
-              <button
-                onClick={() => setShowApiKeyPrompt(false)}
-                className="flex-1 py-2 bg-[#edeeef] text-[#191c1d] text-xs font-semibold rounded border border-[#c4c6cd] hover:bg-[#e1e3e4]"
-              >
-                Later
-              </button>
-            </div>
           </div>
         </div>
       )}

@@ -1,21 +1,48 @@
 import { cert, getApps, initializeApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
-export function firestore() {
+function firebaseCredentials() {
+  const projectId = process.env.FIREBASE_PROJECT_ID?.trim();
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL?.trim();
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n').trim();
+
+  if (projectId && clientEmail && privateKey) {
+    return { projectId, clientEmail, privateKey };
+  }
+
   const rawCredentials = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-  if (!rawCredentials) throw new Error('Firebase service-account credentials are not configured.');
-  let credentials: Record<string, string>;
-  try { credentials = JSON.parse(rawCredentials); } catch { throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON is not valid JSON.'); }
-  const app = getApps()[0] || initializeApp({ credential: cert(credentials) });
+  if (!rawCredentials) throw new Error('Firebase credentials are not configured.');
+
+  let parsed: Record<string, string>;
+  try {
+    parsed = JSON.parse(rawCredentials);
+  } catch {
+    throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON is not valid JSON.');
+  }
+
+  return {
+    projectId: parsed.project_id || parsed.projectId,
+    clientEmail: parsed.client_email || parsed.clientEmail,
+    privateKey: (parsed.private_key || parsed.privateKey || '').replace(/\\n/g, '\n'),
+  };
+}
+
+export function firestore() {
+  const credentials = firebaseCredentials();
+  if (!credentials.projectId || !credentials.clientEmail || !credentials.privateKey) {
+    throw new Error('Firebase credentials are incomplete.');
+  }
+  const app = getApps()[0] || initializeApp({ credential: cert(credentials), projectId: credentials.projectId });
   return getFirestore(app);
 }
 
 export function toCase(id: string, value: any) {
   const diagnosis = value.aiDiagnosis || {};
+  const decision = value.humanDecision || null;
   return {
     caseId: id, timestamp: value.timestamp || new Date().toISOString(), title: diagnosis.rootCause || 'Network diagnosis',
-    status: value.humanDecision === 'Reject' ? 'REJECTED' : 'RESOLVED', targetDevice: value.targetDevice || '', problemDescription: value.problemDescription || '', commandType: value.commandType || '', commandOutput: value.commandOutput || '', diagnosis,
-    humanReview: { decision: value.humanDecision || null, comments: value.reasonForChange || '', reviewer: value.reviewer || '', verificationTest: value.verificationTest || '', verificationOutput: value.verificationResult || null, isTesting: false, submitted: true }, nodeCount: Number(value.nodeCount || 0),
+    status: !decision ? 'OPEN' : decision === 'Reject' ? 'REJECTED' : 'RESOLVED', targetDevice: value.targetDevice || '', problemDescription: value.problemDescription || '', commandType: value.commandType || '', commandOutput: value.commandOutput || '', diagnosis,
+    humanReview: { decision, comments: value.reasonForChange || '', reviewer: value.reviewer || '', verificationTest: value.verificationTest || '', verificationOutput: value.verificationResult || null, isTesting: false, submitted: Boolean(decision) }, nodeCount: Number(value.nodeCount || 0),
   };
 }
 
