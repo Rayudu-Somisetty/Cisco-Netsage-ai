@@ -269,6 +269,16 @@ export default function App() {
     setIsConfigDrawerOpen(false);
   };
 
+  // Surface a backend/API failure to the user via the shared info modal.
+  // (Previously called but never defined, which crashed the app on any
+  // diagnosis error with "showBackendError is not defined".)
+  const showBackendError = (message: string) => {
+    setFooterModalInfo({
+      title: 'Diagnosis Error',
+      content: message,
+    });
+  };
+
   // Run AI Analysis via Backend Endpoint
   const handleRunAnalysis = async () => {
     setIsAnalyzing(true);
@@ -357,18 +367,31 @@ export default function App() {
   // Submit Final Report to Case History
   const handleSubmitReport = async () => {
     if (!aiInsight || !humanReview.decision) return;
-    const response = await fetch(apiUrl('/api/review/submit'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
-      aiDiagnosis: aiInsight, checkerFindings: aiInsight.ruleChecks, humanDecision: humanReview.decision,
-      finalDiagnosis: humanReview.decision === 'Edit' ? humanReview.comments : aiInsight.rootCause,
-      reasonForChange: humanReview.comments, reviewer: humanReview.reviewer, verificationResult: humanReview.verificationOutput,
-      targetDevice: selectedNode?.name || '', problemDescription, commandType, commandOutput, verificationTest: humanReview.verificationTest, nodeCount: nodes.length, caseId,
-    }) });
-    const data = await response.json();
-    if (data.success) {
-      setCaseId(data.caseId);
-      setCasesHistory(data.history || []);
-      setReviewStats(await (await fetch(apiUrl('/api/review/stats'))).json());
-      setHumanReview((prev) => ({ ...prev, submitted: true }));
+    try {
+      const response = await fetch(apiUrl('/api/review/submit'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+        aiDiagnosis: aiInsight, checkerFindings: aiInsight.ruleChecks, humanDecision: humanReview.decision,
+        finalDiagnosis: humanReview.decision === 'Edit' ? humanReview.comments : aiInsight.rootCause,
+        reasonForChange: humanReview.comments, reviewer: humanReview.reviewer, verificationResult: humanReview.verificationOutput,
+        targetDevice: selectedNode?.name || '', problemDescription, commandType, commandOutput, verificationTest: humanReview.verificationTest, nodeCount: nodes.length, caseId,
+      }) });
+      const data = await response.json();
+      if (data.success) {
+        setCaseId(data.caseId);
+        setCasesHistory(data.history || []);
+        // Refresh aggregate stats separately - a failure here shouldn't stop
+        // the report itself from being marked submitted.
+        fetch(apiUrl('/api/review/stats'))
+          .then((statsRes) => statsRes.json())
+          .then(setReviewStats)
+          .catch(() => undefined);
+        setHumanReview((prev) => ({ ...prev, submitted: true }));
+      } else {
+        showBackendError(data.error || 'The review could not be saved.');
+      }
+    } catch (err) {
+      console.error('Failed to submit report:', err);
+      const message = err instanceof Error ? err.message : 'The review service could not be reached.';
+      showBackendError(message);
     }
   };
 
