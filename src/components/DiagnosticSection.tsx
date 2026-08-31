@@ -63,7 +63,7 @@ export const DiagnosticSection: React.FC<DiagnosticSectionProps> = ({
   return (
     <div
       id="bottom-diagnostic-panel"
-      className="h-[370px] min-h-[340px] border-t border-[#c4c6cd] bg-white flex flex-col z-20 shrink-0 select-none overflow-hidden"
+      className="h-[380px] min-h-[340px] border-t border-[#c4c6cd] bg-white flex flex-col z-20 shrink-0 select-none overflow-hidden"
     >
       <div className="flex h-full overflow-hidden">
         {/* LEFT COLUMN: Diagnosis Parameters (5/12) */}
@@ -127,7 +127,7 @@ export const DiagnosticSection: React.FC<DiagnosticSectionProps> = ({
                   </span>
                 </div>
                 <textarea
-                  className="w-full flex-1 bg-[#f8f9fa] border border-[#74777d]/60 text-[11px] font-mono p-2 focus:border-[#0058be] focus:bg-white outline-none resize-none rounded leading-snug overflow-y-auto text-[#041627]"
+                  className="w-full flex-1 min-h-[120px] h-[120px] bg-[#f8f9fa] border border-[#74777d]/60 text-[11px] font-mono p-2 focus:border-[#0058be] focus:bg-white outline-none resize-none rounded leading-snug overflow-y-auto text-[#041627]"
                   placeholder="Paste terminal output here..."
                   value={commandOutput}
                   onChange={(e) => onChangeCommandOutput(e.target.value)}
