@@ -109,11 +109,20 @@ export const TopologyCanvas: React.FC<TopologyCanvasProps> = ({
     setIsPanning(false);
   };
 
-  const handleWheel = (e: React.WheelEvent) => {
+  const handleWheel = useCallback((e: WheelEvent) => {
     e.preventDefault();
     const direction = e.deltaY > 0 ? -0.1 : 0.1;
     setZoom((prev) => clamp(Number((prev + direction).toFixed(2)), 0.5, 1.8));
-  };
+  }, []);
+
+  // React registers wheel listeners as passive in modern browsers. Register this
+  // zoom handler natively so preventing page scroll is both intentional and valid.
+  useEffect(() => {
+    const canvas = containerRef.current;
+    if (!canvas) return;
+    canvas.addEventListener('wheel', handleWheel, { passive: false });
+    return () => canvas.removeEventListener('wheel', handleWheel);
+  }, [handleWheel]);
 
   const zoomIn = () => setZoom((prev) => clamp(Number((prev + 0.1).toFixed(2)), 0.5, 1.8));
   const zoomOut = () => setZoom((prev) => clamp(Number((prev - 0.1).toFixed(2)), 0.5, 1.8));
@@ -197,7 +206,6 @@ export const TopologyCanvas: React.FC<TopologyCanvasProps> = ({
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
-        onWheel={handleWheel}
         className="h-full w-full relative overflow-hidden cursor-grab active:cursor-grabbing"
       >
         <div

@@ -6,7 +6,7 @@ interface SettingsModalProps {
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
-  const [modelName, setModelName] = useState('gemini-3.7-flash');
+  const [modelName, setModelName] = useState('gemini-2.5-flash');
   const [strictOsiMode, setStrictOsiMode] = useState(true);
   const [autoRuleCheck, setAutoRuleCheck] = useState(true);
   const [tacVendor, setTacVendor] = useState('Cisco IOS / XE');
@@ -42,7 +42,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
               onChange={(e) => setModelName(e.target.value)}
               className="w-full bg-white border border-[#74777d]/60 text-xs p-2 focus:border-[#0058be] outline-none rounded font-sans"
             >
-              <option value="gemini-3.7-flash">Gemini 3.7 Flash (Default - Ultra Fast TAC Engine)</option>
+              <option value="gemini-2.5-flash">Gemini 2.5 Flash (Default - Fast TAC Engine)</option>
             </select>
           </div>
 

@@ -115,20 +115,20 @@ app.post('/api/diagnose', async (req, res) => {
 
   try {
     const prompt = `You are a network reliability engineer. Diagnose only from supplied evidence and return strict JSON.\nProblem: ${payload.problemDescription || '(not provided)'}\nCommand: ${payload.commandType || '(not provided)'}\nOutput:\n${payload.commandOutput || '(not provided)'}\nTopology:\n${JSON.stringify(payload.topology || [])}\nSelected node:\n${JSON.stringify(payload.selectedNode || {})}\nPython rule checks:\n${JSON.stringify(ruleChecks)}\nReturn rootCause, confidence, confidenceLevel, osiLayer, evidence, nextCommand, suggestedFix, explanation, and ruleChecks.`;
-    const response = await geminiClient.models.generateContent({ model: 'gemini-3.7-flash', contents: prompt, config: {
+    const response = await geminiClient.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt, config: {
       responseMimeType: 'application/json', responseSchema: { type: Type.OBJECT, properties: {
         rootCause: { type: Type.STRING }, confidence: { type: Type.INTEGER }, confidenceLevel: { type: Type.STRING }, osiLayer: { type: Type.STRING }, evidence: { type: Type.ARRAY, items: { type: Type.STRING } }, nextCommand: { type: Type.STRING }, suggestedFix: { type: Type.STRING }, explanation: { type: Type.STRING }, ruleChecks: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { id: { type: Type.STRING }, label: { type: Type.STRING }, status: { type: Type.STRING }, detail: { type: Type.STRING } }, required: ['id', 'label', 'status', 'detail'] } },
       }, required: ['rootCause', 'confidence', 'confidenceLevel', 'osiLayer', 'evidence', 'nextCommand', 'suggestedFix', 'ruleChecks'] },
     }});
     const diagnosis = JSON.parse(response.text || '{}'); diagnosis.ruleChecks = ruleChecks;
-    res.json({ success: true, data: diagnosis, source: 'gemini-3.7-flash' });
+    res.json({ success: true, data: diagnosis, source: 'gemini-2.5-flash' });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     const isKeyFailure = /(401|403|429|quota|rate limit|invalid api key|api key|expired|forbidden)/i.test(message);
     console.error('Gemini diagnosis failed:', message);
     res.status(isKeyFailure ? 401 : 503).json({
       success: false,
-      source: 'gemini-3.7-flash',
+      source: 'gemini-2.5-flash',
       error: isKeyFailure ? 'Your Gemini API key is invalid, expired, or rate-limited. Please enter a new key.' : `Diagnosis unavailable: ${message}`,
     });
   }

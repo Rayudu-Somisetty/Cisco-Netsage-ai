@@ -296,7 +296,14 @@ export default function App() {
         }),
       });
 
-      const data = await res.json();
+      const contentType = res.headers.get('content-type') || '';
+      const data = contentType.includes('application/json')
+        ? await res.json()
+        : null;
+
+      if (!data) {
+        throw new Error(`Diagnosis endpoint returned ${res.status} instead of JSON. Start the app with \"npm run dev\" (not Vite preview/static hosting) so the Express API is available.`);
+      }
       if (data.success && data.data) {
         setAiInsight(data.data);
         setShowApiKeyPrompt(false);
@@ -307,7 +314,8 @@ export default function App() {
     } catch (err) {
       console.error('Failed to run AI diagnosis:', err);
       setAiInsight(null);
-      promptForApiKey('The AI service could not be reached. Please check your Gemini API key and try again.');
+      const message = err instanceof Error ? err.message : 'The AI service could not be reached.';
+      promptForApiKey(message);
     }
   };
 
