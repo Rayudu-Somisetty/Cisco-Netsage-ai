@@ -1,4 +1,5 @@
-import { allowMethod, getHistory } from '../_lib';
+import { allowMethod } from '../_lib';
+import { getHistory } from '../firebase';
 export default async function handler(req: any, res: any) {
   if (!allowMethod(req, res, ['GET'])) return;
   try {
@@ -12,6 +13,7 @@ export default async function handler(req: any, res: any) {
     });
     res.status(200).json({ totalCases: history.length, issueTypes, severity, decisions, aiAgreementRate: history.length ? Math.round((decisions.Accepted / history.length) * 100) : 0 });
   } catch (error) {
-    res.status(500).json({ success: false, error: error instanceof Error ? error.message : 'Could not load review statistics.' });
+    console.error('Firestore review statistics unavailable:', error);
+    res.status(200).json({ totalCases: 0, issueTypes: {}, severity: {}, decisions: { Accepted: 0, Edited: 0, Rejected: 0 }, aiAgreementRate: 0, persistenceAvailable: false });
   }
 }

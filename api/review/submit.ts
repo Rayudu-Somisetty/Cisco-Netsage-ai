@@ -1,4 +1,5 @@
-import { allowMethod, firestore, getHistory } from '../_lib';
+import { allowMethod } from '../_lib';
+import { firestore, getHistory } from '../firebase';
 export default async function handler(req: any, res: any) {
   if (!allowMethod(req, res, ['POST'])) return;
   try {

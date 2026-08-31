@@ -1,4 +1,5 @@
-import { allowMethod, firestore } from './_lib';
+import { allowMethod } from './_lib';
+import { firestore } from './firebase';
 export default async function handler(req: any, res: any) {
   if (!allowMethod(req, res, ['PUT'])) return;
   const topology = Array.isArray(req.body?.topology) ? req.body.topology : [];
